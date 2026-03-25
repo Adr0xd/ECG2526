@@ -1,7 +1,7 @@
-#include "Vector4D.h"
+#include "vec4.h"
 
 namespace egc {
-    Vector4D& Vector4D::operator =(const Vector4D &srcVector) {
+    vec4& vec4::operator =(const vec4 &srcVector) {
         this->x = srcVector.x;
         this->y = srcVector.y;
         this->z = srcVector.z;
@@ -9,11 +9,11 @@ namespace egc {
         return *this;
     }
 
-    Vector4D Vector4D::operator +(const Vector4D &srcVector) const {
+    vec4 vec4::operator +(const vec4 &srcVector) const {
         return {this->x + srcVector.x, this->y + srcVector.y, this->z + srcVector.z, this->w + srcVector.w};
     }
 
-    Vector4D &Vector4D::operator +=(const Vector4D &srcVector) {
+    vec4 &vec4::operator +=(const vec4 &srcVector) {
         this->x += srcVector.x;
         this->y += srcVector.y;
         this->z += srcVector.z;
@@ -21,11 +21,11 @@ namespace egc {
         return *this;
     }
 
-    Vector4D Vector4D::operator -(const Vector4D &srcVector) const {
+    vec4 vec4::operator -(const vec4 &srcVector) const {
         return {this->x - srcVector.x, this->y - srcVector.y, this->z - srcVector.z, this->w - srcVector.w};
     }
 
-    Vector4D &Vector4D::operator -=(const Vector4D &srcVector) {
+    vec4 &vec4::operator -=(const vec4 &srcVector) {
         this->x -= srcVector.x;
         this->y -= srcVector.y;
         this->z -= srcVector.z;
@@ -33,12 +33,12 @@ namespace egc {
         return *this;
     }
 
-    float Vector4D::length() const {
+    float vec4::length() const {
         return std::sqrt(this->x * this->x + this->y * this->y + this->z * this->z + this->w * this->w);
     }
 
-    Vector4D& Vector4D::normalize() {
-        float len = this->length();
+    vec4& vec4::normalize() {
+        const float len = this->length();
         if (len > 0) {
             this->x /= len;
             this->y /= len;
