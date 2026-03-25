@@ -1,8 +1,8 @@
-#include "Vector2D.h"
+#include "vec2.h"
 
 namespace egc {
 
-    Vector2D& Vector2D::operator =(const Vector2D &srcVector) {
+    vec2& vec2::operator =(const vec2 &srcVector) {
         this->x = srcVector.x;
         this->y = srcVector.y;
         return *this;
@@ -10,43 +10,43 @@ namespace egc {
 
     // const after the parameter list makes the function constant, and it
     // means that it cannot modify "this"
-    Vector2D Vector2D::operator +(const Vector2D &srcVector) const {
-        Vector2D result;
+    vec2 vec2::operator +(const vec2 &srcVector) const {
+        vec2 result;
         result.x = this->x + srcVector.x;
         result.y = this->y + srcVector.y;
         return result;
     }
 
-    Vector2D &Vector2D::operator +=(const Vector2D &srcVector) {
+    vec2 &vec2::operator +=(const vec2 &srcVector) {
         this->x += srcVector.x;
         this->y += srcVector.y;
         return *this;
     }
 
-    Vector2D Vector2D::operator *(const float scalarValue) const {
+    vec2 vec2::operator *(const float scalarValue) const {
         return {this->x * scalarValue, this->y * scalarValue};
     }
 
-    Vector2D Vector2D::operator -(const Vector2D& srcVector) const {
+    vec2 vec2::operator -(const vec2& srcVector) const {
         return {this->x - srcVector.x, this->y - srcVector.y};
     }
 
-    Vector2D& Vector2D::operator -=(const Vector2D& srcVector) {
+    vec2& vec2::operator -=(const vec2& srcVector) {
         this->x -= srcVector.x;
         this->y -= srcVector.y;
         return *this;
     }
 
-    Vector2D Vector2D::operator -() const {
+    vec2 vec2::operator -() const {
         return {-this->x, -this->y};
     }
 
-    float Vector2D::length() const {
+    float vec2::length() const {
         return std::sqrt(this->x * this->x + this->y * this->y);
     }
 
-    Vector2D& Vector2D::normalize() {
-        float len = this->length();
+    vec2& vec2::normalize() {
+        const float len = this->length();
         if (len > 0) {
             this->x /= len;
             this->y /= len;
@@ -54,7 +54,7 @@ namespace egc {
         return *this;
     }
 
-    float dotProduct(const Vector2D& v1, const Vector2D& v2) {
+    float dotProduct(const vec2& v1, const vec2& v2) {
         return v1.x * v2.x + v1.y * v2.y;
     }
 

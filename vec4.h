@@ -13,7 +13,7 @@
 
 namespace egc {
 
-class Vector4D
+class vec4
 {
 public:
     union
@@ -45,7 +45,7 @@ public:
     //=========================================
     
     //default constructor creates a zero vector
-    Vector4D()
+    vec4()
     {
 		x = 0.0f;
 		y = 0.0f;
@@ -54,7 +54,7 @@ public:
     }
     
     //creates a vector (fX, fY, fZ, fW)
-    Vector4D(float fX, float fY, float fZ, float fW)
+    vec4(float fX, float fY, float fZ, float fW)
     {
 		x = fX;
 		y = fY;
@@ -63,7 +63,7 @@ public:
     }
     
     //copy constructor
-    Vector4D(const Vector4D &srcVector)
+    vec4(const vec4 &srcVector)
     {
 		x = srcVector.x;
 		y = srcVector.y;
@@ -75,30 +75,30 @@ public:
     //
     //=========================================
     
-    bool operator ==(const Vector4D& srcVector) const
+    bool operator ==(const vec4& srcVector) const
     {
         return (std::abs(x - srcVector.x) < std::numeric_limits<float>::epsilon()) && (std::abs(y - srcVector.y) < std::numeric_limits<float>::epsilon()) && (std::abs(z - srcVector.z) < std::numeric_limits<float>::epsilon()) && (std::abs(w - srcVector.w) < std::numeric_limits<float>::epsilon());
     }
     
-    friend std::ostream& operator<< (std::ostream &out, const Vector4D& srcVector);
+    friend std::ostream& operator<< (std::ostream &out, const vec4& srcVector);
     
     //=========================================
     //4D vector operations
     //TO BE IMPLEMENTED
     //=========================================
     
-    Vector4D& operator =(const Vector4D &srcVector);
-    Vector4D operator +(const Vector4D& srcVector) const;
-    Vector4D& operator +=(const Vector4D& srcVector);
-    Vector4D operator *(float scalarValue) const;
-    Vector4D operator -(const Vector4D& srcVector) const;
-    Vector4D& operator -=(const Vector4D& srcVector);
-    Vector4D operator -() const;
+    vec4& operator =(const vec4 &srcVector);
+    vec4 operator +(const vec4& srcVector) const;
+    vec4& operator +=(const vec4& srcVector);
+    vec4 operator *(float scalarValue) const;
+    vec4 operator -(const vec4& srcVector) const;
+    vec4& operator -=(const vec4& srcVector);
+    vec4 operator -() const;
     float length() const;
-    Vector4D& normalize();
+    vec4& normalize();
 };
     
-    inline std::ostream& operator<< (std::ostream &out, const Vector4D& srcVector)
+    inline std::ostream& operator<< (std::ostream &out, const vec4& srcVector)
     {
         out << "(" << srcVector.x << ", " << srcVector.y << ", " << srcVector.z << ", " << srcVector.w << ")";
         return out;
