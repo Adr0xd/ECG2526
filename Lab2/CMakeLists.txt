@@ -10,6 +10,8 @@ add_executable(Lab2
         vec4.cpp
         mat3.cpp
         mat4.cpp
-        testMatrix.cpp)
+        testMatrix.cpp
+        testTransform.cpp
+        transform.cpp)
 
 target_link_libraries(Lab2 SDL3)

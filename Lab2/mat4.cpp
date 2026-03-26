@@ -98,9 +98,6 @@ namespace egc {
         mat4 thisT = this->transpose();
 
         const float det = this->determinant();
-        if (det == 0) {
-            return nullptr;
-        }
 
         float src_mat3_00[] = {
             thisT.at(1, 1), thisT.at(2, 1), thisT.at(3, 1),

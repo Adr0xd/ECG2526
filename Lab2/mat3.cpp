@@ -64,10 +64,6 @@ namespace egc {
     }
 
     mat3 mat3::inverse() const {
-        if (this->determinant() == 0.0f) {
-            return nullptr; // 0 matrix
-        }
-
         mat3 thisT = this->transpose();
 
         const float a00 = +thisT.at(1, 1) * thisT.at(2, 2) - thisT.at(2, 1) * thisT.at(1, 2);
