@@ -9,7 +9,8 @@
 #include "vec2.h"
 #include "vec3.h"
 #include "vec4.h"
-#include "testMatrix.h"[
+#include "testMatrix.h"
+#include "testTransform.h"
 
 int testVec2Implementation() {
     int nrOfErrors = 0;
@@ -225,9 +226,20 @@ void testMat() {
     std::cout << "Number of errors: " << nrOfErrors << std::endl;
 }
 
+void testTransform() {
+    int nrOfErrors = 0;
+
+    nrOfErrors += egc::test2DTransformImplementation();
+    nrOfErrors += egc::test3DTransformImplementation();
+
+    std::cout << "Number of errors: " << nrOfErrors << std::endl;
+}
+
 int main(int argc, const char *argv[]) {
 
-    testMat();
+    // testMat();
+
+    testTransform();
 
     // std::getchar();
 
