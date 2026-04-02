@@ -28,7 +28,7 @@ int testMat3Implementation()
     }
 
     float a5[] = {3.0f, 0.0f, 0.0f, 0.0f, 3.0f, 0.0f, 3.0f, 3.0f, 3.0f};
-    egc::mat3 m5(a5);
+    mat3 m5(a5);
 
     m4 = m1 * 3.0f;
     if(m4 == m5)
