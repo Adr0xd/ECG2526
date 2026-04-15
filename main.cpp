@@ -1,247 +1,213 @@
+//  SDL_TestClip
 //
-//  main.cpp
-//  Lab2
+//  Created by CGIS on 16/02/2025.
+//  Copyright � 2025 CGIS. All rights reserved.
 //
-//  Copyright © 2016 CGIS. All rights reserved.
+//  This is a test setup for your clipping algorithm implementation
+//  This application draws the clipping window beteen the points (250,200) and (550, 400)
+//  You can draw the line that you want to clip with a "drag-n-drop" action within the window
 //
+//  To apply the Cohen-Sutherland algorithm to your line, press the 'c' key.
+//  This will invoke the function implementation from the "clip.cpp" file. 
+//  You must implement the functions within that file!!!! 
+//  Check "clip.h" and the Laboratory work for clues about the implemntation
+//
+
+/************************************************* IMPORTANT *********************************************************/
+//  !!!!! ADD ALL OF YOUR IMPLEMENTED SOURCES -> vec3, vec4, mat3, mat4, transform (".h" and ".cpp") files !!!!!!
+//
+/*******************************************************************************************************************/
 
 #include <iostream>
-#include "vec2.h"
-#include "vec3.h"
-#include "vec4.h"
-#include "testMatrix.h"
-#include "testTransform.h"
+#include <SDL3/SDL.h>
+#include "clip.h"
 
-int testVec2Implementation() {
-    int nrOfErrors = 0;
+using namespace egc;
 
-    std::cout << "Testing vec2 class" << std::endl;
+// define rectangle vertices
+vec3 p1 { 0.0f, 0.0f, 1.0f };
+vec3 p2 { 0.0f, 0.0f, 1.0f };
 
-    egc::vec2 v1, v2, v3, v4;
+//define clipping window
+std::vector<vec3> clipWindow;
 
-    v1.x = 1.0f;
-    v2.y = 1.0f;
+//define window dimensions
+constexpr int WINDOW_WIDTH = 800;
+constexpr int WINDOW_HEIGHT = 600;
 
-    v3 = v1 + v2;
-    if (v3 == egc::vec2(1.0f, 1.0f))
-        std::cout << "\tCorrect + operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect + operation" << std::endl;
-        nrOfErrors++;
-    }
+SDL_Window* window { nullptr };
+SDL_Renderer* renderer { nullptr };
+SDL_Event currentEvent;
 
-    v3 += v1;
-    if (v3 == egc::vec2(2.0f, 1.0f))
-        std::cout << "\tCorrect += operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect += operation" << std::endl;
-        nrOfErrors++;
-    }
+SDL_Color backgroundColor { 255,255,255,255 };
+SDL_Color clippingWindowColor { 0, 128, 0, 255 };
+SDL_Color lineColor { 0, 0, 255,255 };
 
-    v3 = egc::vec2(2.0f, 1.0f) - v1;
-    if (v3 == egc::vec2(1.0f, 1.0f))
-        std::cout << "\tCorrect - operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect - operation" << std::endl;
-        nrOfErrors++;
-    }
+bool quit { false };
 
-    v3 -= v1;
-    if (v3 == egc::vec2(0.0f, 1.0f))
-        std::cout << "\tCorrect -= operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect -= operation" << std::endl;
-        nrOfErrors++;
-    }
+float mouseX { -1.0f }, mouseY { -1.0f };
 
-    v3 = egc::vec2(3.0f, 4.0f);
-    if (v3.length() == 5.0f)
-        std::cout << "\tCorrect length operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect length operation" << std::endl;
-        nrOfErrors++;
-    }
+float displayScale { 1.0f };
 
-    v4 = v3.normalize();
-    if (v4 == egc::vec2(0.6f, 0.8f))
-        std::cout << "\tCorrect normalize operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect normalize operation" << std::endl;
-        nrOfErrors++;
-    }
+bool initWindow()
+{
+	bool success { true };
 
-    if (egc::dotProduct(v1, v2) == 0.0f)
-        std::cout << "\tCorrect dot product operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect dot product operation" << std::endl;
-        nrOfErrors++;
-    }
+	//Try to initialize SDL
+	if (!SDL_Init(SDL_INIT_VIDEO))
+	{
+		SDL_Log("SDL initialization failed: %s\n", SDL_GetError());
+		success = false;
+	}
+	else {
+		//Try to create the window and renderer
+		displayScale = SDL_GetDisplayContentScale(1);
 
-    return nrOfErrors;
+		if (!SDL_CreateWindowAndRenderer(
+			"SDL Hello World Example",
+			static_cast<int>(displayScale * WINDOW_WIDTH),
+			static_cast<int>(displayScale * WINDOW_HEIGHT),
+			SDL_WINDOW_HIGH_PIXEL_DENSITY,
+			&window, &renderer))
+		{
+			SDL_Log("Failed to create window and renderer: %s\n", SDL_GetError());
+			success = false;
+		}
+		else
+		{
+			//Apply global display scaling to renderer
+			SDL_SetRenderScale(renderer, displayScale, displayScale);
+
+			//Set background color
+			SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+
+			//Apply background color
+			SDL_RenderClear(renderer);
+		}
+	}
+
+	return success;
 }
 
-int testVec3Implementation() {
-    int nrOfErrors = 0;
+void destroyWindow()
+{
+	//Destroy renderer
+	if (renderer)
+		SDL_DestroyRenderer(renderer);
+	renderer = nullptr;
 
-    std::cout << "Testing vec3 class" << std::endl;
+	//Destroy window
+	if (window)
+		SDL_DestroyWindow(window);
+	window = nullptr;
 
-    egc::vec3 v1, v2, v3, v4;
-
-    v1.x = 1.0f;
-    v2.y = 1.0f;
-
-    v3 = v1 + v2;
-    if (v3 == egc::vec3(1.0f, 1.0f, 0.0f))
-        std::cout << "\tCorrect + operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect + operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v3 += v1;
-    if (v3 == egc::vec3(2.0f, 1.0f, 0.0f))
-        std::cout << "\tCorrect += operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect += operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v3 = egc::vec3(2.0f, 1.0f, 0.0f) - v1;
-    if (v3 == egc::vec3(1.0f, 1.0f, 0.0f))
-        std::cout << "\tCorrect - operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect - operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v3 -= v1;
-    if (v3 == egc::vec3(0.0f, 1.0f, 0.0f))
-        std::cout << "\tCorrect -= operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect -= operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v3 = egc::vec3(2.0f, 4.0f, 4.0f);
-    if (v3.length() == 6.0f)
-        std::cout << "\tCorrect length operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect length operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v4 = v3.normalize();
-    if (v4 == egc::vec3(2.0f / 6.0f, 4.0f / 6.0f, 4.0f / 6.0f))
-        std::cout << "\tCorrect normalize operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect normalize operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    if (egc::dotProduct(v1, v2) == 0.0f)
-        std::cout << "\tCorrect dot product operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect dot product operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v4 = egc::crossProduct(v1, v2);
-    if (v4 == egc::vec3(0.0f, 0.0f, 1.0f))
-        std::cout << "\tCorrect cross product operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect cross product operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    return nrOfErrors;
+	//Quit SDL
+	SDL_Quit();
 }
 
-int testVec4Implementation() {
-    int nrOfErrors = 0;
-
-    std::cout << "Testing vec4 class" << std::endl;
-
-    egc::vec4 v1, v2, v3, v4;
-
-    v1.x = 1.0f;
-    v2.y = 1.0f;
-
-    v3 = v1 + v2;
-    if (v3 == egc::vec4(1.0f, 1.0f, 0.0f, 0.0f))
-        std::cout << "\tCorrect + operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect + operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v3 += v1;
-    if (v3 == egc::vec4(2.0f, 1.0f, 0.0f, 0.0f))
-        std::cout << "\tCorrect += operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect += operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v3 = egc::vec4(2.0f, 1.0f, 0.0f, 0.0f) - v1;
-    if (v3 == egc::vec4(1.0f, 1.0f, 0.0f, 0.0f))
-        std::cout << "\tCorrect - operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect - operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v3 -= v1;
-    if (v3 == egc::vec4(0.0f, 1.0f, 0.0f, 0.0f))
-        std::cout << "\tCorrect -= operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect -= operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v3 = egc::vec4(2.0f, 4.0f, 4.0f, 0.0f);
-    if (v3.length() == 6.0f)
-        std::cout << "\tCorrect length operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect length operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    v4 = v3.normalize();
-    if (v4 == egc::vec4(2.0f / 6.0f, 4.0f / 6.0f, 4.0f / 6.0f, 0.0f))
-        std::cout << "\tCorrect normalize operation" << std::endl;
-    else {
-        std::cout << "\tIncorrect normalize operation" << std::endl;
-        nrOfErrors++;
-    }
-
-    return nrOfErrors;
+//Create the corners of the clipping window (drawn as a rectangle)
+void initClipWindow()
+{
+	clipWindow.push_back(vec3(250.0f, 200.0f, 1.0f));
+	clipWindow.push_back(vec3(550.0f, 200.0f, 1.0f));
+	clipWindow.push_back(vec3(550.0f, 400.0f, 1.0f));
+	clipWindow.push_back(vec3(250.0f, 400.0f, 1.0f));
 }
 
-void testMat() {
-    int nrOfErrors = 0;
+int main(int argc, char * argv[]) {
 
-    nrOfErrors += egc::testMat3Implementation();
-    nrOfErrors += egc::testMat4Implementation();
+	if (!initWindow())
+	{
+		SDL_Log("Failed to initialize");
+		return -1;
+	}
 
-    std::cout << "Number of errors: " << nrOfErrors << std::endl;
-}
+	initClipWindow();
 
-void testTransform() {
-    int nrOfErrors = 0;
+	std::cout << "Draw the line you want to clip witha drang-n-drop mouse action!" << "\n";
+	std::cout << "Press the \'c\' key to apply the Cohen-Sutherland clipping algorithm!" << "\n\n";
 
-    nrOfErrors += egc::test2DTransformImplementation();
-    nrOfErrors += egc::test3DTransformImplementation();
+	SDL_zero(currentEvent);
 
-    std::cout << "Number of errors: " << nrOfErrors << std::endl;
-}
+	while (!quit) {
+		//Handle events on queue
+		while (SDL_PollEvent(&currentEvent))
+		{
+			//User requests quit
+			if (currentEvent.type == SDL_EVENT_QUIT)
+			{
+				quit = true;
+			}
 
-int main(int argc, const char *argv[]) {
+			//Mouse event -> pressed button
+			if (currentEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+			{
+				if (currentEvent.button.button == SDL_BUTTON_LEFT)
+				{
+					//left mouse button was pressed
+					SDL_GetMouseState(&mouseX, &mouseY);
+					mouseX /= displayScale;
+					mouseY /= displayScale;
+					p1.x = p2.x = mouseX;
+					p1.y = p2.y = mouseY;
+				}
+			}
 
-    // testMat();
+			//Mouse event -> mouse movement
+			if (currentEvent.type == SDL_EVENT_MOUSE_MOTION)
+			{
+				SDL_MouseButtonFlags mouseButtons = SDL_GetMouseState(nullptr, nullptr);
+				if (mouseButtons & SDL_BUTTON_MASK(SDL_BUTTON_LEFT))
+				{
+					//left button pressed while moving
+					SDL_GetMouseState(&mouseX, &mouseY);
+					mouseX /= displayScale;
+					mouseY /= displayScale;
+					p2.x = mouseX;
+					p2.y = mouseY;
+				}
+			}
 
-    testTransform();
+			//Keyboard event
+			if (currentEvent.type == SDL_EVENT_KEY_DOWN)
+			{
+				switch (currentEvent.key.key)
+				{
+				case SDLK_C:
+					std::cout << "Applying Cohen-Sutherland clipping" << "\n";
+					//Applies the Cohen-Sutherland clipping algorithm -> implemented by you
+					if (lineClip_CohenSutherland(clipWindow, p1, p2) == -1)
+						p1.x = p2.x = p1.y = p2.y = 0.0f;
+					break;
+				case SDLK_ESCAPE:
+					quit = true;
+					break;
+				default:
+					break;
+				}
+			}
+			//Paint the white background
+			SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+			SDL_RenderClear(renderer);
 
-    // std::getchar();
+			//draw the clipping window
+			SDL_SetRenderDrawColor(renderer, clippingWindowColor.r, clippingWindowColor.g, clippingWindowColor.b, clippingWindowColor.a);
+			for (size_t i = 0; i < clipWindow.size(); i++)
+				SDL_RenderLine(
+					renderer,
+					clipWindow.at(i).x,
+					clipWindow.at(i).y,
+					clipWindow.at((i + 1) % clipWindow.size()).x,
+					clipWindow.at((i + 1) % clipWindow.size()).y);
 
-    return 0;
+			//draw the line
+			SDL_SetRenderDrawColor(renderer, lineColor.r, lineColor.g, lineColor.b, lineColor.a);
+			SDL_RenderLine(renderer, p1.x, p1.y, p2.x, p2.y);
+
+			SDL_RenderPresent(renderer);
+		}
+	}
+
+	destroyWindow();
+	return 0;
 }

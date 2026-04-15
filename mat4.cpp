@@ -19,7 +19,7 @@ namespace egc {
     }
 
     mat4 mat4::operator *(const mat4 &srcMatrix) const {
-        mat4 result = mat4(); // identity matrix;
+        auto result = mat4(); // identity matrix;
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 result.at(i, j) = 0;
@@ -32,13 +32,11 @@ namespace egc {
     }
 
     vec4 mat4::operator *(const vec4 &srcVector) const {
-        vec4 result = vec4();
-        for (int i = 0; i < 4; i++) {
-            result.x += this->at(0, i) * srcVector.x;
-            result.y += this->at(1, i) * srcVector.y;
-            result.z += this->at(2, i) * srcVector.z;
-            result.w += this->at(3, i) * srcVector.w;
-        }
+        auto result = vec4();
+        result.x = this->at(0,0) * srcVector.x + this->at(0,1) * srcVector.y + this->at(0,2) * srcVector.z + this->at(0,3) * srcVector.w;
+        result.y = this->at(1,0) * srcVector.x + this->at(1,1) * srcVector.y + this->at(1,2) * srcVector.z + this->at(1,3) * srcVector.w;
+        result.z = this->at(2,0) * srcVector.x + this->at(2,1) * srcVector.y + this->at(2,2) * srcVector.z + this->at(2,3) * srcVector.w;
+        result.w = this->at(3,0) * srcVector.x + this->at(3,1) * srcVector.y + this->at(3,2) * srcVector.z + this->at(3,3) * srcVector.w;
         return result;
     }
 
