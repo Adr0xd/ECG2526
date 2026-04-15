@@ -31,11 +31,9 @@ namespace egc {
 
     vec3 mat3::operator *(const vec3 &srcVector) const {
         vec3 result = vec3();
-        for (int i = 0; i < 3; i++) {
-            result.x += this->at(0, i) * srcVector.x;
-            result.y += this->at(1, i) * srcVector.y;
-            result.z += this->at(2, i) * srcVector.z;
-        }
+        result.x = this->at(0, 0) * srcVector.x + this->at(0, 1) * srcVector.y + this->at(0, 2) * srcVector.z;
+        result.y = this->at(1, 0) * srcVector.x + this->at(1, 1) * srcVector.y + this->at(1, 2) * srcVector.z;
+        result.z = this->at(2, 0) * srcVector.x + this->at(2, 1) * srcVector.y + this->at(2, 2) * srcVector.z;
         return result;
     }
 

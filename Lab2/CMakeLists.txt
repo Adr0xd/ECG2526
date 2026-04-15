@@ -12,6 +12,9 @@ add_executable(Lab2
         mat4.cpp
         testMatrix.cpp
         testTransform.cpp
-        transform.cpp)
+        transform.cpp
+        polygon.cpp
+        clip.cpp
+)
 
 target_link_libraries(Lab2 SDL3)
