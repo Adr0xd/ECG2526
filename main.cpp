@@ -1,213 +1,270 @@
-//  SDL_TestClip
-//
-//  Created by CGIS on 16/02/2025.
-//  Copyright � 2025 CGIS. All rights reserved.
-//
-//  This is a test setup for your clipping algorithm implementation
-//  This application draws the clipping window beteen the points (250,200) and (550, 400)
-//  You can draw the line that you want to clip with a "drag-n-drop" action within the window
-//
-//  To apply the Cohen-Sutherland algorithm to your line, press the 'c' key.
-//  This will invoke the function implementation from the "clip.cpp" file. 
-//  You must implement the functions within that file!!!! 
-//  Check "clip.h" and the Laboratory work for clues about the implemntation
-//
-
-/************************************************* IMPORTANT *********************************************************/
-//  !!!!! ADD ALL OF YOUR IMPLEMENTED SOURCES -> vec3, vec4, mat3, mat4, transform (".h" and ".cpp") files !!!!!!
-//
-/*******************************************************************************************************************/
-
 #include <iostream>
 #include <SDL3/SDL.h>
 #include "clip.h"
+#include "polygon.h"
+#include "transform.h"
+#include <cmath>
+#include <unistd.h>
 
 using namespace egc;
 
 // define rectangle vertices
-vec3 p1 { 0.0f, 0.0f, 1.0f };
-vec3 p2 { 0.0f, 0.0f, 1.0f };
+vec3 p1{0.0f, 0.0f, 1.0f};
+vec3 p2{0.0f, 0.0f, 1.0f};
 
 //define clipping window
 std::vector<vec3> clipWindow;
+
+//define a square
+polygon square;
+
+//define the bezier curve control points
+std::vector<vec3> curveControlPoints;
 
 //define window dimensions
 constexpr int WINDOW_WIDTH = 800;
 constexpr int WINDOW_HEIGHT = 600;
 
-SDL_Window* window { nullptr };
-SDL_Renderer* renderer { nullptr };
+SDL_Window *window{nullptr};
+SDL_Renderer *renderer{nullptr};
 SDL_Event currentEvent;
 
-SDL_Color backgroundColor { 255,255,255,255 };
-SDL_Color clippingWindowColor { 0, 128, 0, 255 };
-SDL_Color lineColor { 0, 0, 255,255 };
+SDL_Color backgroundColor{255, 255, 255, 255};
+SDL_Color green{0, 255, 0, 255};
+SDL_Color black{0, 0, 0, 255};
+SDL_Color clippingWindowColor{0, 128, 0, 255};
+SDL_Color lineColor{255, 0, 255, 255};
 
-bool quit { false };
+bool quit{false};
 
-float mouseX { -1.0f }, mouseY { -1.0f };
+bool iHave4{false};
 
-float displayScale { 1.0f };
+float mouseX{-1.0f}, mouseY{-1.0f};
 
-bool initWindow()
-{
-	bool success { true };
+float displayScale{1.0f};
 
-	//Try to initialize SDL
-	if (!SDL_Init(SDL_INIT_VIDEO))
-	{
-		SDL_Log("SDL initialization failed: %s\n", SDL_GetError());
-		success = false;
-	}
-	else {
-		//Try to create the window and renderer
-		displayScale = SDL_GetDisplayContentScale(1);
+bool initWindow() {
+    bool success{true};
 
-		if (!SDL_CreateWindowAndRenderer(
-			"SDL Hello World Example",
-			static_cast<int>(displayScale * WINDOW_WIDTH),
-			static_cast<int>(displayScale * WINDOW_HEIGHT),
-			SDL_WINDOW_HIGH_PIXEL_DENSITY,
-			&window, &renderer))
-		{
-			SDL_Log("Failed to create window and renderer: %s\n", SDL_GetError());
-			success = false;
-		}
-		else
-		{
-			//Apply global display scaling to renderer
-			SDL_SetRenderScale(renderer, displayScale, displayScale);
+    //Try to initialize SDL
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        SDL_Log("SDL initialization failed: %s\n", SDL_GetError());
+        success = false;
+    } else {
+        //Try to create the window and renderer
+        displayScale = SDL_GetDisplayContentScale(1);
 
-			//Set background color
-			SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+        if (!SDL_CreateWindowAndRenderer(
+            "SDL Hello World Example",
+            static_cast<int>(displayScale * WINDOW_WIDTH),
+            static_cast<int>(displayScale * WINDOW_HEIGHT),
+            SDL_WINDOW_HIGH_PIXEL_DENSITY,
+            &window, &renderer)) {
+            SDL_Log("Failed to create window and renderer: %s\n", SDL_GetError());
+            success = false;
+        } else {
+            //Apply global display scaling to renderer
+            SDL_SetRenderScale(renderer, displayScale, displayScale);
 
-			//Apply background color
-			SDL_RenderClear(renderer);
-		}
-	}
+            //Set background color
+            SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b,
+                                   backgroundColor.a);
 
-	return success;
+            //Apply background color
+            SDL_RenderClear(renderer);
+        }
+    }
+
+    return success;
 }
 
-void destroyWindow()
-{
-	//Destroy renderer
-	if (renderer)
-		SDL_DestroyRenderer(renderer);
-	renderer = nullptr;
+void destroyWindow() {
+    //Destroy renderer
+    if (renderer)
+        SDL_DestroyRenderer(renderer);
+    renderer = nullptr;
 
-	//Destroy window
-	if (window)
-		SDL_DestroyWindow(window);
-	window = nullptr;
+    //Destroy window
+    if (window)
+        SDL_DestroyWindow(window);
+    window = nullptr;
 
-	//Quit SDL
-	SDL_Quit();
+    //Quit SDL
+    SDL_Quit();
 }
 
-//Create the corners of the clipping window (drawn as a rectangle)
-void initClipWindow()
-{
-	clipWindow.push_back(vec3(250.0f, 200.0f, 1.0f));
-	clipWindow.push_back(vec3(550.0f, 200.0f, 1.0f));
-	clipWindow.push_back(vec3(550.0f, 400.0f, 1.0f));
-	clipWindow.push_back(vec3(250.0f, 400.0f, 1.0f));
+void initASquare() {
+    square.addVertex(vec3(100.0f, 150.0f, 1.0f));
+    square.addVertex(vec3(150.0f, 150.0f, 1.0f));
+    square.addVertex(vec3(150.0f, 200.0f, 1.0f));
+    square.addVertex(vec3(100.0f, 200.0f, 1.0f));
 }
 
-int main(int argc, char * argv[]) {
+vec3 getPointAt(const float t, const std::vector<vec3> &points) {
+    const vec3 p1 = points.at(0);
+    const vec3 p2 = points.at(1);
+    const vec3 p3 = points.at(2);
+    const vec3 p4 = points.at(3);
 
-	if (!initWindow())
-	{
-		SDL_Log("Failed to initialize");
-		return -1;
-	}
+    return p1 * (1 - t) * (1 - t) * (1 - t) + p2 * 3 * t * (1 - t) * (1 - t) + p3 * 3 * t * t * (1 - t) + p4 * t * t *
+           t;
+}
 
-	initClipWindow();
+vec3 getTangentAt(const float t, const std::vector<vec3> &points) {
+    const vec3 p1 = points.at(0);
+    const vec3 p2 = points.at(1);
+    const vec3 p3 = points.at(2);
+    const vec3 p4 = points.at(3);
 
-	std::cout << "Draw the line you want to clip witha drang-n-drop mouse action!" << "\n";
-	std::cout << "Press the \'c\' key to apply the Cohen-Sutherland clipping algorithm!" << "\n\n";
+    return (p2 - p1) * 3.0f * (1.0f - t) * (1.0f - t) +
+           (p3 - p2) * 6.0f * (1.0f - t) * t +
+           (p4 - p3) * 3.0f * t * t;
+}
 
-	SDL_zero(currentEvent);
+void drawBulina(SDL_Renderer *renderer, const int cx, const int cy, const int radius) {
+    SDL_SetRenderDrawColor(renderer, black.r, black.g, black.b,
+                           black.a);
+    for (int dy = -radius; dy <= radius; dy++) {
+        const int dx = static_cast<int>(sqrt(radius * radius - dy * dy));
 
-	while (!quit) {
-		//Handle events on queue
-		while (SDL_PollEvent(&currentEvent))
-		{
-			//User requests quit
-			if (currentEvent.type == SDL_EVENT_QUIT)
-			{
-				quit = true;
-			}
+        SDL_RenderLine(renderer,
+                       cx - dx, cy + dy,
+                       cx + dx, cy + dy);
+    }
+}
 
-			//Mouse event -> pressed button
-			if (currentEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
-			{
-				if (currentEvent.button.button == SDL_BUTTON_LEFT)
-				{
-					//left mouse button was pressed
-					SDL_GetMouseState(&mouseX, &mouseY);
-					mouseX /= displayScale;
-					mouseY /= displayScale;
-					p1.x = p2.x = mouseX;
-					p1.y = p2.y = mouseY;
-				}
-			}
+int thing = 0;
+float t = 0.0f;
 
-			//Mouse event -> mouse movement
-			if (currentEvent.type == SDL_EVENT_MOUSE_MOTION)
-			{
-				SDL_MouseButtonFlags mouseButtons = SDL_GetMouseState(nullptr, nullptr);
-				if (mouseButtons & SDL_BUTTON_MASK(SDL_BUTTON_LEFT))
-				{
-					//left button pressed while moving
-					SDL_GetMouseState(&mouseX, &mouseY);
-					mouseX /= displayScale;
-					mouseY /= displayScale;
-					p2.x = mouseX;
-					p2.y = mouseY;
-				}
-			}
+int main(int argc, char *argv[]) {
+    if (!initWindow()) {
+        SDL_Log("Failed to initialize");
+        return -1;
+    }
 
-			//Keyboard event
-			if (currentEvent.type == SDL_EVENT_KEY_DOWN)
-			{
-				switch (currentEvent.key.key)
-				{
-				case SDLK_C:
-					std::cout << "Applying Cohen-Sutherland clipping" << "\n";
-					//Applies the Cohen-Sutherland clipping algorithm -> implemented by you
-					if (lineClip_CohenSutherland(clipWindow, p1, p2) == -1)
-						p1.x = p2.x = p1.y = p2.y = 0.0f;
-					break;
-				case SDLK_ESCAPE:
-					quit = true;
-					break;
-				default:
-					break;
-				}
-			}
-			//Paint the white background
-			SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
-			SDL_RenderClear(renderer);
+    initASquare();
 
-			//draw the clipping window
-			SDL_SetRenderDrawColor(renderer, clippingWindowColor.r, clippingWindowColor.g, clippingWindowColor.b, clippingWindowColor.a);
-			for (size_t i = 0; i < clipWindow.size(); i++)
-				SDL_RenderLine(
-					renderer,
-					clipWindow.at(i).x,
-					clipWindow.at(i).y,
-					clipWindow.at((i + 1) % clipWindow.size()).x,
-					clipWindow.at((i + 1) % clipWindow.size()).y);
+    std::cout << "Click on the screen on the 4 points to make the control points for the curve" << "\n";
 
-			//draw the line
-			SDL_SetRenderDrawColor(renderer, lineColor.r, lineColor.g, lineColor.b, lineColor.a);
-			SDL_RenderLine(renderer, p1.x, p1.y, p2.x, p2.y);
+    SDL_zero(currentEvent);
 
-			SDL_RenderPresent(renderer);
-		}
-	}
+    while (!quit) {
+        //Handle events on queue
+        while (SDL_PollEvent(&currentEvent)) {
+            if (currentEvent.type == SDL_EVENT_QUIT) {
+                quit = true;
+            }
 
-	destroyWindow();
-	return 0;
+            //Mouse event -> mouse movement
+            if (currentEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+                if (currentEvent.button.button == SDL_BUTTON_LEFT) {
+                    //left button pressed while moving
+                    if (!iHave4) {
+                        SDL_GetMouseState(&mouseX, &mouseY);
+                        mouseX /= displayScale;
+                        mouseY /= displayScale;
+
+                        curveControlPoints.push_back(vec3(mouseX, mouseY, 1.0f));
+
+                        if (curveControlPoints.size() > 3) {
+                            iHave4 = true;
+                        }
+
+                        std::cout << "Point " << curveControlPoints.size() << " added!" << "\n";
+                    } else {
+                        curveControlPoints.clear();
+                        iHave4 = false;
+                        thing = 0;
+                        t = 0.0f;
+                    }
+                }
+            }
+
+            //Keyboard event
+            if (currentEvent.type == SDL_EVENT_KEY_DOWN) {
+                switch (currentEvent.key.key) {
+                    case SDLK_C:
+
+                        break;
+                    case SDLK_ESCAPE:
+                        quit = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b,
+                               backgroundColor.a);
+        SDL_RenderClear(renderer);
+
+        SDL_SetRenderDrawColor(renderer, lineColor.r, lineColor.g, lineColor.b,
+                               lineColor.a);
+
+        if (curveControlPoints.size() > 0)
+            for (int i = 0; i < curveControlPoints.size(); i++) {
+                drawBulina(renderer, curveControlPoints.at(i).x, curveControlPoints.at(i).y, 2);
+            }
+
+        switch (thing) {
+            case 0:
+                square.draw(renderer);
+                if (iHave4) thing = 1;
+                t = 0.0f;
+                break;
+            case 1:
+                SDL_SetRenderDrawColor(renderer, lineColor.r, lineColor.g, lineColor.b,
+                                                       lineColor.a);
+                for (float tt = 0; tt < 1.0f; tt += 0.005f) {
+                    const vec3 p1 = getPointAt(tt, curveControlPoints);
+                    const vec3 p2 = getPointAt(tt + 0.005f, curveControlPoints);
+                    SDL_RenderLine(renderer, p1.x, p1.y, p2.x, p2.y);
+                }
+                SDL_SetRenderDrawColor(renderer, 10, 10, 10,
+                                       1);
+                SDL_RenderLine(renderer, curveControlPoints.at(0).x, curveControlPoints.at(0).y,
+                               curveControlPoints.at(1).x, curveControlPoints.at(1).y);
+                SDL_RenderLine(renderer, curveControlPoints.at(2).x, curveControlPoints.at(2).y,
+                               curveControlPoints.at(3).x, curveControlPoints.at(3).y);
+
+                if (t <= 1.0f) {
+                    const vec3 p = getPointAt(t, curveControlPoints);
+                    const vec3 tangent = getTangentAt(t, curveControlPoints);
+
+                    const float angleDeg = atan2(tangent.y, tangent.x) * 180.0f / M_PI;
+
+                    square.transformationMatrix =
+                            translate(p.x, p.y) *
+                            rotate(angleDeg) *
+                            translate(-square.centerPoint.x, -square.centerPoint.y);
+
+                    square.draw(renderer);
+
+                    t += 0.001f;
+                } else {
+                    square.draw(renderer);
+                }
+
+                if (t > 1.0f) {
+                    curveControlPoints.clear();
+                    iHave4 = false;
+                    thing = 0;
+                    t = 0.0f;
+                }
+
+                break;
+            default:
+                break;
+        }
+
+        if (!iHave4) thing = 0;
+
+        SDL_RenderPresent(renderer);
+
+        SDL_Delay(1);
+    }
+
+    destroyWindow();
+    return 0;
 }

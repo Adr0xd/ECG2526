@@ -124,4 +124,10 @@ namespace egc {
 
         return 0;
     }
+
+    int lineClip_CyrusBeck(std::vector<vec3> clipWindow, vec3& p1, vec3& p2) {
+        //TO DO - implement the Cyrus-Beck line clipping algorithm - consult the laboratory work
+
+        return 0;
+    }
 }

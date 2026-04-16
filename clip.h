@@ -19,4 +19,6 @@ namespace egc {
 
     //function returns -1 if the line segment cannot be clipped
     int lineClip_CohenSutherland(std::vector<vec3> clipWindow, vec3& p1, vec3& p2);
+
+    int lineClip_CyrusBeck(std::vector<vec3> clipWindow, vec3& p1, vec3& p2);
 }
