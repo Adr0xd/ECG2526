@@ -54,7 +54,7 @@ namespace egc {
         //points in the SIMPLE ACCEPTANCE case
 
         return cod1[0] == 0 && cod1[1] == 0 && cod1[2] == 0 && cod1[3] == 0 &&
-       cod2[0] == 0 && cod2[1] == 0 && cod2[2] == 0 && cod2[3] == 0;
+               cod2[0] == 0 && cod2[1] == 0 && cod2[2] == 0 && cod2[3] == 0;
     }
 
     //function returns -1 if the line segment cannot be clipped
@@ -82,8 +82,7 @@ namespace egc {
             if (reject) {
                 finished = true;
                 rejected = true;
-            }
-            else {
+            } else {
                 const bool display = simpleAcceptance(code1, code2);
                 if (display)
                     finished = true;
@@ -99,19 +98,20 @@ namespace egc {
 
                     code1 = computeCSCode(clipWindow, p1);
 
-                    if (code1.at(0) == 1) { // U
+                    if (code1.at(0) == 1) {
+                        // U
                         p1.x = p1.x + (p2.x - p1.x) * (y_min - p1.y) / (p2.y - p1.y);
                         p1.y = y_min;
-                    }
-                    else if (code1.at(1) == 1) { // D
+                    } else if (code1.at(1) == 1) {
+                        // D
                         p1.x = p1.x + (p2.x - p1.x) * (y_max - p1.y) / (p2.y - p1.y);
                         p1.y = y_max;
-                    }
-                    else if (code1.at(2) == 1) { // R
+                    } else if (code1.at(2) == 1) {
+                        // R
                         p1.y = p1.y + (p2.y - p1.y) * (x_max - p1.x) / (p2.x - p1.x);
                         p1.x = x_max;
-                    }
-                    else if (code1.at(3) == 1) { // L
+                    } else if (code1.at(3) == 1) {
+                        // L
                         p1.y = p1.y + (p2.y - p1.y) * (x_min - p1.x) / (p2.x - p1.x);
                         p1.x = x_min;
                     }
@@ -125,9 +125,35 @@ namespace egc {
         return 0;
     }
 
-    int lineClip_CyrusBeck(std::vector<vec3> clipWindow, vec3& p1, vec3& p2) {
-        //TO DO - implement the Cyrus-Beck line clipping algorithm - consult the laboratory work
+    int lineClip_CyrusBeck(std::vector<vec3> clipWindow, vec3 &p1, vec3 &p2) {
+        // ignore nid * d != 0 and then if ni*d <0 PE else PL
+        float tE = 0, tL = 1;
+        const vec3 p00 = p1;
+        const vec3 p11 = p2;
+
+        const vec3 D = p2-p1;
+
+        for (int i = 0; i < clipWindow.size(); i++) {
+            const vec3 edgeVector = clipWindow[(i + 1) % clipWindow.size()] - clipWindow[i % clipWindow.size()];
+
+            const vec3 Ni = vec3(edgeVector.y, -edgeVector.x, 0);
+
+            const float prod = dotProduct(Ni, D);
+
+            float ti = -dotProduct(p1-clipWindow[i], Ni)/prod;
+
+            if (prod < 0)
+                tE = std::max(tE, ti);
+            else
+                tL = std::min(tL, ti);
+        }
+
+        if (tE>tL) return -1;
+
+        p1 = p00 + (p11-p00)*tE;
+        p2 = p00 + (p11-p00)*tL;
 
         return 0;
+
     }
 }
