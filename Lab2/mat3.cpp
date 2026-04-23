@@ -17,7 +17,7 @@ namespace egc {
     }
 
     mat3 mat3::operator *(const mat3 &srcMatrix) const {
-        mat3 result = mat3(); // identity matrix;
+        auto result = mat3(); // identity matrix;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 result.at(i, j) = 0;
@@ -30,7 +30,7 @@ namespace egc {
     }
 
     vec3 mat3::operator *(const vec3 &srcVector) const {
-        vec3 result = vec3();
+        auto result = vec3();
         result.x = this->at(0, 0) * srcVector.x + this->at(0, 1) * srcVector.y + this->at(0, 2) * srcVector.z;
         result.y = this->at(1, 0) * srcVector.x + this->at(1, 1) * srcVector.y + this->at(1, 2) * srcVector.z;
         result.z = this->at(2, 0) * srcVector.x + this->at(2, 1) * srcVector.y + this->at(2, 2) * srcVector.z;
