@@ -32,6 +32,15 @@ namespace egc {
             }
         }
 
+        explicit mat4(const int zero) {
+            if (zero == 0)
+                for (int i = 0; i < 16; i++)
+                    matrixData[i] = (i % 5) ? 0.0f : 1.0f;
+            else
+                for (int i = 0; i < 16; i++)
+                    matrixData[i] = 0.0f;
+        }
+
         mat4(const float *srcMatrix) {
             std::copy(srcMatrix, srcMatrix + 16, matrixData);
         }
