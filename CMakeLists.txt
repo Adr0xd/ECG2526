@@ -16,6 +16,8 @@ add_executable(Lab2
         polygon.cpp
         clip.cpp
         bresenham.cpp
+        projection.cpp
+        camera.cpp
 )
 
 target_link_libraries(Lab2 SDL3)

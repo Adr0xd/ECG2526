@@ -1,90 +1,34 @@
-// EGC_Bresenham.cpp : Defines the entry point for the console application.
 //
-//  Created by CGIS on 13/04/2020.
-//  Copyright ? 2020 CGIS. All rights reserved.
+//  All the auxiliary code (window creation/destruction, validation method and others) has been moved to "auxiliary.h" to keep the main file as simple as possible
+//
+//  Copyright ? 2016 CGIS. All rights reserved.
 //
 
 #include <iostream>
 #include <SDL3/SDL.h>
-#include "bresenham.h"
 
-//define window dimensions
-constexpr int WINDOW_WIDTH { 640 };
-constexpr int WINDOW_HEIGHT { 480 };
+#include "auxiliary.h"
 
-//The window
-SDL_Window* window { nullptr };
-//The window renderer
-SDL_Renderer* renderer { nullptr };
-SDL_Event currentEvent;
-
-SDL_Color backgroundColor { 255, 255, 255, 255 };
-SDL_Color lineColor { 0, 0, 0, 255 };
-SDL_Color circleColor { 0, 255, 255, 255 };
 
 bool quit { false };
+
 float mouseX { -1.0f }, mouseY { -1.0f };
+float rotationAngle { 0.0f };
 
-BresenhamLine myLine;
-BresenhamCircle myCircle;
 
-float displayScale { 1.0f };
+egc::mat4 viewTransformMatrix;
+egc::mat4 cameraMatrix;
+egc::mat4 perspectiveMatrix;
+egc::mat4 modelMatrix;
+egc::Camera myCamera;
 
-bool initWindow()
-{
-	bool success { true };
+egc::vec2 viewportTopLeftCorner { 30, 30 };
+egc::vec2 viewportDimensions { 400, 400 };
 
-	//Try to initialize SDL
-	if (!SDL_Init(SDL_INIT_VIDEO))
-	{
-		SDL_Log("SDL initialization failed: %s\n", SDL_GetError());
-		success = false;
-	}
-	else {
-		//Try to create the window and renderer
-		displayScale = SDL_GetDisplayContentScale(1);
+bool backFaceCulling { true };
+bool displayNormals { false };
 
-		if (!SDL_CreateWindowAndRenderer(
-				"SDL Hello World Example",
-				static_cast<int>(displayScale * WINDOW_WIDTH),
-				static_cast<int>(displayScale * WINDOW_HEIGHT),
-				SDL_WINDOW_HIGH_PIXEL_DENSITY,
-				&window, &renderer))
-		{
-			SDL_Log("Failed to create window and renderer: %s\n", SDL_GetError());
-			success = false;
-		}
-		else
-		{
-			//Apply global display scaling to renderer
-			SDL_SetRenderScale(renderer, displayScale, displayScale);
-
-			//Set background color
-			SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
-
-			//Apply background color
-			SDL_RenderClear(renderer);
-		}
-	}
-
-	return success;
-}
-
-void destroyWindow()
-{
-	//Destroy renderer
-	if (renderer)
-		SDL_DestroyRenderer(renderer);
-	renderer = nullptr;
-
-	//Destroy window
-	if (window)
-		SDL_DestroyWindow(window);
-	window = nullptr;
-
-	//Quit SDL
-	SDL_Quit();
-}
+float displayScale{ 1.0f };
 
 void handleMouseEvents()
 {
@@ -96,8 +40,6 @@ void handleMouseEvents()
 			SDL_GetMouseState(&mouseX, &mouseY);
 			mouseX /= displayScale;
 			mouseY /= displayScale;
-			myLine.startX = myLine.endX = mouseX;
-			myLine.startY = myLine.endY = mouseY;
 		}
 
 		if (currentEvent.button.button == SDL_BUTTON_RIGHT)
@@ -105,14 +47,11 @@ void handleMouseEvents()
 			SDL_GetMouseState(&mouseX, &mouseY);
 			mouseX /= displayScale;
 			mouseY /= displayScale;
-			myCircle.centerX = mouseX;
-			myCircle.centerY = mouseY;
-			myCircle.radius = 0.0f;
 		}
 	}
-
+	
 	//Mouse event -> mouse movement
-	if (currentEvent.type == SDL_EVENT_MOUSE_MOTION)
+	/*if (currentEvent.type == SDL_EVENT_MOUSE_MOTION)
 	{
 		SDL_MouseButtonFlags mouseButtons = SDL_GetMouseState(nullptr, nullptr);
 		if (mouseButtons & SDL_BUTTON_MASK(SDL_BUTTON_LEFT))
@@ -120,8 +59,6 @@ void handleMouseEvents()
 			SDL_GetMouseState(&mouseX, &mouseY);
 			mouseX /= displayScale;
 			mouseY /= displayScale;
-			myLine.endX = mouseX;
-			myLine.endY = mouseY;
 		}
 
 		if (mouseButtons & SDL_BUTTON_MASK(SDL_BUTTON_RIGHT))
@@ -129,10 +66,9 @@ void handleMouseEvents()
 			SDL_GetMouseState(&mouseX, &mouseY);
 			mouseX /= displayScale;
 			mouseY /= displayScale;
-			myCircle.radius = sqrt((mouseX - myCircle.centerX) * (mouseX - myCircle.centerX) +
-				(mouseY - myCircle.centerY) * (mouseY - myCircle.centerY));
 		}
-	}
+	}*/
+	
 }
 
 void handleKeyboardEvents()
@@ -146,11 +82,119 @@ void handleKeyboardEvents()
 			quit = true;
 			break;
 
+		case SDLK_A:
+			rotationAngle += 10.0f;
+			break;
+
+		case SDLK_D:
+			rotationAngle -= 10.0f;
+			break;
+
+		case SDLK_W:
+			cameraZ -= 0.5f;
+			break;
+
+		case SDLK_S:
+			cameraZ += 0.5f;
+			break;
+
+		case SDLK_Z:
+			backFaceCulling = true;
+			break;
+
+		case SDLK_C:
+			backFaceCulling = false;
+			break;
+
+		case SDLK_Q:
+			displayNormals = true;
+			break;
+
+		case SDLK_E:
+			displayNormals = false;
+			break;
+
 		default:
 			break;
 		}
 	}
 }
+
+//draw a triangle line by line
+void drawWireframeTriangle(SDL_Renderer *renderer, const std::vector<egc::vec4> &triangle)
+{
+	for (int i = 0; i < 3; i++)
+		SDL_RenderLine(renderer, triangle.at((i + 1) % 3).x, triangle.at((i + 1) % 3).y, triangle.at(i).x, triangle.at(i).y);
+}
+
+void renderMesh(SDL_Renderer *renderer, std::vector<tinyobj::shape_t> shapes)
+{
+	egc::vec3 normalVector;
+	egc::vec4 triangleCenter;
+
+	int vertexId = -1;
+
+	//for each mesh in the 3d model representation
+	for (size_t i = 0; i < shapes.size(); i++) {
+		//for each triangle
+		std::vector<egc::vec4> triangle;
+		for (size_t f = 0; f < shapes[i].mesh.indices.size() / 3; f++) {
+			//update the triangle with vertices coordinates
+			for (int k = 0; k < 3; k++)
+			{
+				vertexId = shapes[i].mesh.indices[3 * f + k];
+				triangle.push_back(egc::vec4(shapes[i].mesh.positions[3 * vertexId + 0], shapes[i].mesh.positions[3 * vertexId + 1], shapes[i].mesh.positions[3 * vertexId + 2], 1));
+			}
+
+			//compute the coordinates in view (camera) space
+			for (int k = 0; k < 3; k++)
+				triangle.at(k) = cameraMatrix * modelMatrix * triangle.at(k);
+
+			//compute the normal vector and triangle center
+			normalVector = findNormalVectorToTriangle(triangle);
+			triangleCenter = findCenterPointOfTriangle(triangle);
+
+			//apply back-face culling
+			if (!isTriangleVisible(triangle, normalVector) && backFaceCulling)
+			{
+				//clear the triangle
+				triangle.clear();
+				continue;
+			}
+
+			//apply the perspective matrix
+			for (int k = 0; k < 3; k++)
+				triangle.at(k) = perspectiveMatrix * triangle.at(k);
+
+			if (clipTriangleInHomegeneousCoordinates(triangle))
+			{
+				//clear the triangle
+				triangle.clear();
+				continue;
+			}
+
+			//apply the perspective divide and the viewport transformation matrix
+			for (int k = 0; k < 3; k++)
+			{
+				egc::perspectiveDivide(triangle.at(k));
+
+				triangle.at(k) = viewTransformMatrix * triangle.at(k);
+			}
+
+			//draw the triangle
+			SDL_SetRenderDrawColor(renderer, 96, 96, 96, 0);
+			drawWireframeTriangle(renderer, triangle);
+
+			//display the normal vectors
+			if (displayNormals)
+				displayNormalVectors(normalVector, triangleCenter, renderer, viewTransformMatrix, perspectiveMatrix);
+
+			//clear the triangle
+			triangle.clear();
+		}
+	}
+}
+
 
 
 int main(int argc, char * argv[]) {
@@ -159,6 +203,21 @@ int main(int argc, char * argv[]) {
 		SDL_Log("Failed to initialize");
 		return -1;
 	}
+
+	displayScale = SDL_GetDisplayContentScale(1);
+	//Apply global display scaling to renderer
+	SDL_SetRenderScale(renderer, displayScale, displayScale);
+
+	myCamera = egc::Camera(egc::vec3(-0.3f, 1.5f, cameraZ), egc::vec3(-0.3f, 1.5f, -10.0f), egc::vec3(0.0f, 1.0f, 0.0f));
+	viewTransformMatrix = egc::defineViewTransformMatrix(static_cast<int>(viewportTopLeftCorner.x), static_cast<int>(viewportTopLeftCorner.y), static_cast<int>(viewportDimensions.x), static_cast<int>(viewportDimensions.y));
+	cameraMatrix = egc::defineCameraMatrix(myCamera);
+	perspectiveMatrix = egc::definePerspectiveProjectionMatrix(45.0f, 1.0, -0.1f, -10.0f);
+
+	validateViewingTransformations();
+
+	std::vector<tinyobj::shape_t> shapes = readOBJ("bunny.obj");
+
+	SDL_FRect viewportRectangle = { viewportTopLeftCorner.x, viewportTopLeftCorner.y, viewportDimensions.x, viewportDimensions.y };
 
 	SDL_zero(currentEvent);
 
@@ -176,16 +235,18 @@ int main(int argc, char * argv[]) {
 			handleKeyboardEvents();
 
 			//Clear screen
-			SDL_SetRenderDrawColor(renderer, backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+			SDL_SetRenderDrawColor(renderer, 224, 224, 224, 0);
 			SDL_RenderClear(renderer);
 
-			//Draw Bresenham line
-			SDL_SetRenderDrawColor(renderer, lineColor.r, lineColor.g, lineColor.b, lineColor.a);
-			BresenhamDraw(myLine, renderer);
+			SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
+			SDL_RenderRect(renderer, &viewportRectangle);
 
-			//Draw Bresenham circle
-			SDL_SetRenderDrawColor(renderer, circleColor.r, circleColor.g, circleColor.b, circleColor.a);
-			BresenhamDraw(myCircle, renderer);
+			modelMatrix = egc::rotateY(rotationAngle) * egc::scale(15.0f, 15.0f, 15.0f);
+			myCamera.cameraPosition.z = cameraZ;
+			cameraMatrix = egc::defineCameraMatrix(myCamera);
+
+			SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
+			renderMesh(renderer, shapes);
 
 			//Update screen
 			SDL_RenderPresent(renderer);
@@ -195,3 +256,4 @@ int main(int argc, char * argv[]) {
 	destroyWindow();
 	return 0;
 }
+

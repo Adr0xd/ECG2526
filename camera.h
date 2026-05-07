@@ -12,9 +12,9 @@
 namespace egc {
     class Camera{
     public:
-        vec3 cameraPosition;
-        vec3 cameraTarget;
-        vec3 cameraUp;
+        vec3 cameraPosition; // eye position
+        vec3 cameraTarget; // gaze direction g
+        vec3 cameraUp; // view up vector t
         
         //default constructor
         Camera(){
@@ -23,7 +23,7 @@ namespace egc {
             cameraUp = vec3(0.0f, 1.0f, 0.0f);
         };
         
-        Camera(vec3 cameraPosition, vec3 cameraTarget, vec3 cameraUp)
+        Camera(const vec3 &cameraPosition, const vec3 &cameraTarget, const vec3 &cameraUp)
         {
             this->cameraPosition = cameraPosition;
             this->cameraTarget = cameraTarget;
