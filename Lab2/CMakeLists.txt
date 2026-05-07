@@ -15,6 +15,7 @@ add_executable(Lab2
         transform.cpp
         polygon.cpp
         clip.cpp
+        bresenham.cpp
 )
 
 target_link_libraries(Lab2 SDL3)
