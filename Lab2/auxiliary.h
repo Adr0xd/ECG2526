@@ -8,13 +8,10 @@
 #include "transform.h"
 #include "camera.h"
 #include "projection.h"
+#include "globalVars.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 #include "tiny_obj_loader.h"
-
-//define window dimensions
-constexpr int WINDOW_WIDTH { 512 };
-constexpr int WINDOW_HEIGHT { 512 };
 
 //The window
 SDL_Window* window { nullptr };
@@ -23,12 +20,36 @@ SDL_Renderer* renderer { nullptr };
 SDL_Event currentEvent;
 float cameraZ { 3.0f };
 
+extern float depthBuffer[WINDOW_WIDTH][WINDOW_HEIGHT];
+
+egc::vec2 getZminZmax(tinyobj::shape_t shape) {
+
+    float zMin, zMax;
+
+    zMin = zMax = shape.mesh.positions.at(2);
+
+    for (size_t i = 1; i < shape.mesh.positions.size() / 3; i++) {
+
+        if (zMin > shape.mesh.positions.at(3 * i + 2)) {
+
+            zMin = shape.mesh.positions.at(3 * i + 2);
+        }
+
+        if (zMax < shape.mesh.positions.at(3 * i + 2)) {
+
+            zMax = shape.mesh.positions.at(3 * i + 2);
+        }
+    }
+
+    return egc::vec2(zMin, zMax);
+}
+
 std::vector<tinyobj::shape_t> readOBJ(std::string inputfile)
 {
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
 
-	std::string err;	
+	std::string err;
 	bool ret = tinyobj::LoadObj(shapes, materials, err, inputfile.c_str());
 
 	if (!err.empty()) { // `err` may contain warning message.
@@ -68,7 +89,7 @@ std::vector<tinyobj::shape_t> readOBJ(std::string inputfile)
 
 bool initWindow()
 {
-	bool success { true };
+	bool success{ true };
 
 	//Try to initialize SDL
 	if (!SDL_Init(SDL_INIT_VIDEO))
@@ -78,7 +99,7 @@ bool initWindow()
 	}
 	else {
 		//Try to create the window and renderer
-		float displayScale { SDL_GetDisplayContentScale(1) };
+		float displayScale{ SDL_GetDisplayContentScale(1) };
 
 		if (!SDL_CreateWindowAndRenderer(
 			"SDL Hello World Example",
@@ -123,7 +144,7 @@ void validateViewingTransformations()
 	else
 		std::cout << "Incorrect viewTransformMatrix" << std::endl;
 
-	float a2[] = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.920967f, 0.38964f, 0.0f, 0.0f, -0.38964f, 0.920967f, 1.0f, 0.3f, -3.8964f, -4.90592f, 1.0f };
+	float a2[] = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.920967f, 0.38964f, 0.0f, 0.0f, -0.38964f, 0.920967f, 0.0f, 0.3f, -3.8964f, -4.90592f, 1.0f };
 
 	egc::mat4 m3(a2), m4;
 
@@ -150,7 +171,6 @@ void validateViewingTransformations()
 	egc::vec4 v(150, 330, 10, 5);
 	egc::perspectiveDivide(v);
 	egc::vec4 v1(30, 66, 2, 1);
-	float w = v.w;
 
 	if (v.x == v1.x && v.y == v1.y  && v.z == v1.z  && v.w == v1.w) {
 		std::cout << "Correct perspective divide" << std::endl;

@@ -8,7 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include "auxiliary.h"
-
+#include "rasterization.h"
 
 bool quit { false };
 
@@ -27,6 +27,9 @@ egc::vec2 viewportDimensions { 400, 400 };
 
 bool backFaceCulling { true };
 bool displayNormals { false };
+
+egc::vec2 zMinMax;
+float depthBuffer[WINDOW_WIDTH][WINDOW_HEIGHT];
 
 float displayScale{ 1.0f };
 
@@ -49,7 +52,7 @@ void handleMouseEvents()
 			mouseY /= displayScale;
 		}
 	}
-	
+
 	//Mouse event -> mouse movement
 	/*if (currentEvent.type == SDL_EVENT_MOUSE_MOTION)
 	{
@@ -68,7 +71,6 @@ void handleMouseEvents()
 			mouseY /= displayScale;
 		}
 	}*/
-	
 }
 
 void handleKeyboardEvents()
@@ -83,11 +85,11 @@ void handleKeyboardEvents()
 			break;
 
 		case SDLK_A:
-			rotationAngle += 10.0f;
+			rotationAngle -= 10.0f;
 			break;
 
 		case SDLK_D:
-			rotationAngle -= 10.0f;
+			rotationAngle += 10.0f;
 			break;
 
 		case SDLK_W:
@@ -138,12 +140,15 @@ void renderMesh(SDL_Renderer *renderer, std::vector<tinyobj::shape_t> shapes)
 	for (size_t i = 0; i < shapes.size(); i++) {
 		//for each triangle
 		std::vector<egc::vec4> triangle;
+        std::vector<egc::vec4> triangleColors;
 		for (size_t f = 0; f < shapes[i].mesh.indices.size() / 3; f++) {
 			//update the triangle with vertices coordinates
 			for (int k = 0; k < 3; k++)
 			{
 				vertexId = shapes[i].mesh.indices[3 * f + k];
 				triangle.push_back(egc::vec4(shapes[i].mesh.positions[3 * vertexId + 0], shapes[i].mesh.positions[3 * vertexId + 1], shapes[i].mesh.positions[3 * vertexId + 2], 1));
+                const float colorCoeff = 255 * ((shapes[i].mesh.positions[3 * vertexId + 2] - zMinMax.x) / (zMinMax.y - zMinMax.x));
+                triangleColors.push_back(egc::vec4(colorCoeff, colorCoeff, colorCoeff, 255.0f));
 			}
 
 			//compute the coordinates in view (camera) space
@@ -159,6 +164,7 @@ void renderMesh(SDL_Renderer *renderer, std::vector<tinyobj::shape_t> shapes)
 			{
 				//clear the triangle
 				triangle.clear();
+                triangleColors.clear();
 				continue;
 			}
 
@@ -170,6 +176,7 @@ void renderMesh(SDL_Renderer *renderer, std::vector<tinyobj::shape_t> shapes)
 			{
 				//clear the triangle
 				triangle.clear();
+                triangleColors.clear();
 				continue;
 			}
 
@@ -182,8 +189,7 @@ void renderMesh(SDL_Renderer *renderer, std::vector<tinyobj::shape_t> shapes)
 			}
 
 			//draw the triangle
-			SDL_SetRenderDrawColor(renderer, 96, 96, 96, 0);
-			drawWireframeTriangle(renderer, triangle);
+            egc::rasterizeTriangle(renderer, triangle, triangleColors);
 
 			//display the normal vectors
 			if (displayNormals)
@@ -191,11 +197,10 @@ void renderMesh(SDL_Renderer *renderer, std::vector<tinyobj::shape_t> shapes)
 
 			//clear the triangle
 			triangle.clear();
+            triangleColors.clear();
 		}
 	}
 }
-
-
 
 int main(int argc, char * argv[]) {
 	if (!initWindow())
@@ -213,9 +218,11 @@ int main(int argc, char * argv[]) {
 	cameraMatrix = egc::defineCameraMatrix(myCamera);
 	perspectiveMatrix = egc::definePerspectiveProjectionMatrix(45.0f, 1.0, -0.1f, -10.0f);
 
-	validateViewingTransformations();
+	//validateViewingTransformations();
 
-	std::vector<tinyobj::shape_t> shapes = readOBJ("bunny.obj");
+    std::vector<tinyobj::shape_t> shapes = readOBJ("/home/mishu/faculta/an2sem2/ECG2526/Lab2/bunny.obj");
+
+    zMinMax = getZminZmax(shapes.at(0));
 
 	SDL_FRect viewportRectangle = { viewportTopLeftCorner.x, viewportTopLeftCorner.y, viewportDimensions.x, viewportDimensions.y };
 
@@ -244,6 +251,8 @@ int main(int argc, char * argv[]) {
 			modelMatrix = egc::rotateY(rotationAngle) * egc::scale(15.0f, 15.0f, 15.0f);
 			myCamera.cameraPosition.z = cameraZ;
 			cameraMatrix = egc::defineCameraMatrix(myCamera);
+
+            egc::clearDepthBuffer();
 
 			SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
 			renderMesh(renderer, shapes);
