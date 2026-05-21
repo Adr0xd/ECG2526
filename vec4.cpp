@@ -33,6 +33,15 @@ namespace egc {
         return *this;
     }
 
+    vec4 vec4::operator *(float scalarValue) const {
+        return {
+            this->x * scalarValue,
+            this->y * scalarValue,
+            this->z * scalarValue,
+            this->w * scalarValue
+        };
+    }
+
     float vec4::length() const {
         return std::sqrt(this->x * this->x + this->y * this->y + this->z * this->z + this->w * this->w);
     }

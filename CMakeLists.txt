@@ -18,6 +18,7 @@ add_executable(Lab2
         bresenham.cpp
         projection.cpp
         camera.cpp
+        rasterization.cpp
 )
 
 target_link_libraries(Lab2 SDL3)
