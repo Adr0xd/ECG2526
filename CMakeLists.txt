@@ -1,7 +1,16 @@
-cmake_minimum_required(VERSION 4.1)
+cmake_minimum_required(VERSION 3.16)
 project(Lab2)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# On macOS (Apple Silicon), tell CMake where Homebrew packages are located
+if(APPLE)
+    list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew")
+endif()
+
+# Find the official SDL3 CMake package
+find_package(SDL3 REQUIRED)
 
 add_executable(Lab2
         main.cpp
@@ -21,4 +30,6 @@ add_executable(Lab2
         rasterization.cpp
 )
 
-target_link_libraries(Lab2 SDL3)
+# Linking against the imported target SDL3::SDL3 automatically configures
+# both header include paths (-I) and library linking (-l)
+target_link_libraries(Lab2 PRIVATE SDL3::SDL3)
